@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1a472a">
+    <title>Town1 | Planet Apartments</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Noto Sans Ethiopic', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c2c 0%, #2c5a3a 100%);
+            min-height: 100vh;
+        }
+        
+        /* Login Overlay */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            padding: 20px;
+        }
+        
+        .login-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 32px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+        }
+        
+        .login-box h2 {
+            color: #1a472a;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .password-wrapper input {
+            flex: 1;
+            padding-right: 45px;
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            cursor: pointer;
+            color: #ff9800;
+            background: white;
+            padding: 8px;
+            border-radius: 50%;
+            font-size: 1rem;
+        }
+        
+        .user-type-select {
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            justify-content: center;
+        }
+        
+        .user-type-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .user-type-btn.active {
+            background: #ff9800;
+            border-color: #ff9800;
+            color: white;
+        }
+        
+        .login-box input {
+            width: 100%;
+            padding: 14px;
+            margin: 12px 0;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            font-size: 1rem;
+        }
+        
+        .login-btn {
+            background: linear-gradient(135deg, #1a472a, #0e2a1a);
+            color: white;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .error-msg {
+            color: #e74c3c;
+            margin-top: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .info-msg {
+            color: #ff9800;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            animation: fadeOut3s 3s forwards;
+        }
+        
+        @keyframes fadeOut3s {
+            0% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; display: none; }
+        }
+        
+        /* Main Content */
+        .main-content {
+            display: none;
+            padding-bottom: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #0a2a1a, #1a3a2a);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo h1 {
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .logo .town1, .logo .planet {
+            color: #ff9800;
+        }
+        
+        .admin-badge, .member-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.65rem;
+        }
+        
+        .admin-badge {
+            background: #ff9800;
+        }
+        
+        .member-badge {
+            background: #3498db;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+        }
+        
+        .sync-status {
+            background: #27ae60;
+            padding: 0.3rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.6rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: white;
+        }
+        
+        .sync-status.syncing {
+            background: #f39c12;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        /* Tabs */
+        .main-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background: white;
+            padding: 0.8rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 70px;
+            z-index: 99;
+        }
+        
+        .main-tab-btn {
+            background: #e8f0e8;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 40px;
+            color: #1a472a;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .main-tab-btn.active {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 1rem auto;
+            padding: 0 1rem;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .card h3 {
+            color: #1a472a;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+        }
+        
+        /* Member Info Panel */
+        .member-info-panel {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            padding: 1rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .member-stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat-box {
+            background: rgba(0,0,0,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 16px;
+            text-align: center;
+        }
+        
+        .stat-box div:first-child {
+            font-size: 0.7rem;
+        }
+        
+        .stat-box div:nth-child(2) {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        /* Admin Dashboard */
+        .admin-dashboard {
+            background: linear-gradient(135deg, #2c3e50, #1a2632);
+            color: white;
+            border-radius: 20px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .dashboard-stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        
+        .dashboard-stat {
+            text-align: center;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.15);
+            border-radius: 16px;
+            min-width: 140px;
+        }
+        
+        .dashboard-stat .label {
+            font-size: 0.7rem;
+        }
+        
+        .dashboard-stat .value {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        /* Monthly Report */
+        .monthly-report {
+            background: linear-gradient(135deg, #27ae60, #219a52);
+            color: white;
+            border-radius: 20px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .monthly-stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-top: 1rem;
+        }
+        
+        .monthly-stat {
+            text-align: center;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.2);
+            border-radius: 16px;
+            min-width: 140px;
+        }
+        
+        /* Tables */
+        .excel-table-container {
+            overflow-x: auto;
+            margin: 1rem 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 0.7rem;
+        }
+        
+        .data-table th {
+            background: #34495e;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            font-weight: 600;
+        }
+        
+        .data-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        /* Buttons */
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin: 3px;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+        }
+        
+        .btn-warning {
+            background: #e67e22;
+        }
+        
+        /* Form Elements */
+        select, input {
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.8rem;
+        }
+        
+        .month-selector, .search-bar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: #f8fafc;
+            border-radius: 16px;
+        }
+        
+        .search-bar input {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 25px;
+        }
+        
+        /* Navigation Buttons */
+        .nav-btn {
+            background: #e8f0e8;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 30px;
+            color: #1a472a;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+        
+        .nav-btn.active {
+            background: #ff9800;
+            color: white;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #1e293b;
+            color: #94a3b8;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-top: 2px solid #ff9800;
+            text-align: center;
+        }
+        
+        .company-stamp-img {
+            font-family: monospace;
+            font-size: 0.7rem;
+            border: 1px solid #ff9800;
+            padding: 5px 12px;
+            border-radius: 30px;
+            color: #ff9800;
+            background: rgba(255,152,0,0.1);
+            display: inline-block;
+        }
+        
+        .member-search-result {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 16px;
+            margin-bottom: 15px;
+            font-size: 0.8rem;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header-left {
+                width: 100%;
+                order: 2;
+            }
+            
+            .main-tabs {
+                top: 110px;
+            }
+            
+            .dashboard-stat, .monthly-stat {
+                min-width: 120px;
+            }
+            
+            .month-selector, .search-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .member-info-panel {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginOverlay" class="login-overlay">
+    <div class="login-box">
+        <h2><i class="fas fa-building"></i> TOWN1 | PLANET</h2>
+        <div class="subtitle">🏢 በአንድሮይድ ስልክዎ ላይ የሚሰራ አፕሊኬሽን</div>
+        <div class="user-type-select">
+            <button id="adminTypeBtn" class="user-type-btn active" onclick="selectUserType('admin')"><i class="fas fa-user-shield"></i> አድሚን</button>
+            <button id="memberTypeBtn" class="user-type-btn" onclick="selectUserType('member')"><i class="fas fa-users"></i> አባል</button>
+        </div>
+        <div id="passwordDiv">
+            <div class="password-wrapper">
+                <input type="password" id="loginPassword" placeholder="ፓስዎርድ / አይዲ ያስገቡ">
+                <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility()"></i>
+            </div>
+        </div>
+        <button class="login-btn" onclick="login()"><i class="fas fa-sign-in-alt"></i> ይግቡ</button>
+        <div id="loginError" class="error-msg"></div>
+        <div id="loginInfo" class="info-msg"></div>
+        <p style="margin-top: 1rem; font-size: 0.7rem; color: #888;">
+            <strong>አድሚን:</strong> admin123<br>
+            <strong>አባላት:</strong> አይዲቸውን ይጠቀሙ (ምሳሌ: M1001)
+        </p>
+    </div>
+</div>
+
+<div id="mainContent" class="main-content">
+    <div class="header">
+        <div class="logo">
+            <h1>
+                <i class="fas fa-building"></i> 
+                <span class="town1">TOWN1</span> | 
+                <span class="planet">PLANET</span> 
+                <span>Apartments</span>
+                <span id="userRoleBadge" class="admin-badge"><i class="fas fa-user-shield"></i> አድሚን</span>
+            </h1>
+        </div>
+        <div>
+            <span id="syncStatus" class="sync-status"><i class="fas fa-cloud"></i> ተመሳስሏል</span>
+            <span id="memberNameDisplay" style="background:#3498db; padding:0.3rem 0.8rem; border-radius:30px; font-size:0.7rem; margin-left:10px; display:none;"></span>
+            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> ውጣ</button>
+        </div>
+    </div>
+
+    <div class="main-tabs">
+        <button class="main-tab-btn active" data-tab="construction"><i class="fas fa-hard-hat"></i> የግንባታ ቁሳቁስ</button>
+        <button class="main-tab-btn" data-tab="members"><i class="fas fa-hand-holding-usd"></i> የአባላት መዋጮ</button>
+    </div>
+
+    <div class="container">
+        <!-- Construction Tab -->
+        <div id="constructionTab" class="tab-content active">
+            <div class="card" style="background: linear-gradient(135deg, #ff9800, #f57c00); color: white;">
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+                    <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 1rem; border-radius: 20px;">
+                        <div><i class="fas fa-money-bill-wave"></i> ጠቅላላ ወጪ</div>
+                        <div id="grandTotalAmount" style="font-size: 1.5rem; font-weight: bold;">0.00</div>
+                        <small>ብር (ETB)</small>
+                    </div>
+                    <div id="materialSummaryGrid" style="display: flex; flex-wrap: wrap; gap: 0.6rem;"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                <button class="nav-btn active" data-material="iron"><i class="fas fa-weight-hanging"></i> ብረት</button>
+                <button class="nav-btn" data-material="nail"><i class="fas fa-tools"></i> ሚስማር</button>
+                <button class="nav-btn" data-material="cement"><i class="fas fa-cube"></i> ሲሚንቶ</button>
+                <button class="nav-btn" data-material="gravel"><i class="fas fa-rocket"></i> ጠጠር</button>
+                <button class="nav-btn" data-material="ash"><i class="fas fa-fire"></i> አሽዋ</button>
+                <button class="nav-btn" data-material="others"><i class="fas fa-ellipsis-h"></i> ሌሎች</button>
+            </div>
+            <div id="materialSections"></div>
+            <div id="constructionReport" class="construction-report"></div>
+        </div>
+
+        <!-- Members Tab -->
+        <div id="membersTab" class="tab-content">
+            <div id="monthlyReportSection" class="monthly-report" style="display: none;">
+                <h3><i class="fas fa-chart-line"></i> ወርሃዊ የአባላት መዋጮ ሪፖርት</h3>
+                <div><label>ወር ምረጥ</label><br><input type="month" id="monthlyReportMonth" onchange="updateMonthlyReport()"></div>
+                <div class="monthly-stats" id="monthlyStats">
+                    <div class="monthly-stat"><div class="label">ጠቅላላ ገንዘብ</div><div class="value" id="monthlyTotalAmount">0</div><small>ብር</small></div>
+                    <div class="monthly-stat"><div class="label">የተከፈለ አክሲዮን</div><div class="value" id="monthlyTotalShares">0</div><small>አክሲዮን</small></div>
+                    <div class="monthly-stat"><div class="label">ክፍያ የፈጸሙ</div><div class="value" id="monthlyPayingMembers">0</div><small>አባል</small></div>
+                </div>
+            </div>
+            
+            <div id="adminDashboard" class="admin-dashboard" style="display: none;">
+                <h3><i class="fas fa-chart-line"></i> አጠቃላይ የአባላት መዋጮ ሪፖርት</h3>
+                <div class="dashboard-stats">
+                    <div class="dashboard-stat"><div class="label">ጠቅላላ መዋጮ</div><div class="value" id="totalAllTimeContribution">0</div><small>ብር</small></div>
+                    <div class="dashboard-stat"><div class="label">አጠቃላይ አክሲዮን</div><div class="value" id="totalAllSharesPaid">0</div><small>አክሲዮን</small></div>
+                    <div class="dashboard-stat"><div class="label">አጠቃላይ አባላት</div><div class="value" id="totalMembersCount">0</div><small>አባል</small></div>
+                </div>
+            </div>
+            
+            <div class="member-info-panel">
+                <div>
+                    <h3><i class="fas fa-user-circle"></i> <span id="currentMemberName">-</span></h3>
+                    <p>አክሲዮን: <strong id="currentMemberShares">0</strong> | ስልክ: <strong id="currentMemberPhone">-</strong></p>
+                </div>
+                <div class="member-stats">
+                    <div class="stat-box"><div>አጠቃላይ መዋጮ</div><div id="memberTotalContribution">0</div><small>ብር</small></div>
+                    <div class="stat-box"><div>የመዋጮ ብዛት</div><div id="memberContributionCount">0</div></div>
+                </div>
+            </div>
+            
+            <div id="adminMonthlyEntry" class="card" style="display: none;">
+                <h3><i class="fas fa-calendar-plus"></i> ወርሃዊ መዋጮ ይመዝግቡ</h3>
+                <div class="search-bar"><i class="fas fa-search"></i><input type="text" id="memberSearchInput" placeholder="በስም ወይም በአይዲ ፈልግ..." onkeyup="searchMembers()"></div>
+                <div id="memberSearchResults" class="member-search-result"></div>
+                <div class="month-selector">
+                    <div><label>ወር</label><br><input type="month" id="monthSelect"></div>
+                    <div><label>አባል</label><br><select id="contributionMemberSelect" style="width: 180px;"></select></div>
+                    <div><label>አክሲዮን</label><br><input type="number" id="memberShares" placeholder="ድርሻ" style="width: 100px;"></div>
+                    <div><label>ገንዘብ (ብር)</label><br><input type="number" id="monthlyAmount" placeholder="መጠን" style="width: 120px;"></div>
+                    <div><label>ባንክ ኮድ</label><br><input type="text" id="bankCode" placeholder="ኮድ" style="width: 120px;"></div>
+                    <div><button class="btn btn-success" onclick="addMonthlyContribution()"><i class="fas fa-save"></i> መዝግብ</button></div>
+                </div>
+            </div>
+            
+            <div id="memberViewWarning" class="warning-box" style="display: none;">
+                <i class="fas fa-eye"></i> እንደ አባል የራስዎን መዋጮ ብቻ ማየት ይችላሉ።
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-calendar-alt"></i> በቀን ፈልገህ ውረድ</h3>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div><label>ከቀን</label><br><input type="date" id="filterStartDate"></div>
+                    <div><label>እስከ ቀን</label><br><input type="date" id="filterEndDate"></div>
+                    <button class="btn btn-warning" onclick="filterContributionsByDate()"><i class="fas fa-filter"></i> አጣራ</button>
+                    <button class="btn btn-success" onclick="exportToPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                </div>
+                <div id="filteredResult" style="margin-top:1rem;"></div>
+            </div>
+            
+            <div id="adminMemberManagement" class="card" style="display: none;">
+                <h3><i class="fas fa-user-plus"></i> የአባላት አስተዳደር</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+                    <input type="text" id="newMemberName" placeholder="ሙሉ ስም" style="width: 180px;">
+                    <input type="text" id="newMemberPhone" placeholder="ስልክ ቁጥር" style="width: 130px;">
+                    <input type="number" id="newMemberShares" placeholder="አክሲዮን" style="width: 120px;" value="1">
+                    <button class="btn btn-success" onclick="addNewMember()"><i class="fas fa-plus"></i> አዲስ አባል</button>
+                </div>
+                <div id="newMemberResult"></div>
+                <div class="excel-table-container">
+                    <table class="data-table" id="membersTable">
+                        <thead>
+                            <tr><th>አይዲ</th><th>ስም</th><th>ስልክ</th><th>አክሲዮን</th><th>አጠቃላይ መዋጮ</th><th>ድርጊት</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <div class="company-stamp-img">✧ TOWN1 | PLANET APARTMENTS ✧</div>
+        <div style="margin-top: 8px; font-size: 0.65rem;">Invest your déjeuner to build imagination apartments</div>
+        <div style="margin-top: 5px; font-size: 0.6rem;">በFirebase የደመና ማከማቻ | ውሂብዎ ደህንነቱ የተጠበቀ ነው</div>
+    </div>
+</div>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    
+    // ==================== FIREBASE CONFIGURATION (NEW) ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyDAhzWx_9eibtOoyan8Vd0Q1WbKM9szu1Y",
+        authDomain: "town1-4b96d.firebaseapp.com",
+        databaseURL: "https://town1-4b96d-default-rtdb.firebaseio.com",
+        projectId: "town1-4b96d",
+        storageBucket: "town1-4b96d.firebasestorage.app",
+        messagingSenderId: "1064043097126",
+        appId: "1:1064043097126:android:309586616e3c35232fcae7"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    // ==================== DATA STRUCTURES ====================
+    let constructionData = { iron: [], nail: [], cement: [], gravel: [], ash: [], others: [] };
+    let members = [];
+    let contributions = {};
+    let currentUser = { type: 'admin', memberId: null };
+    let isAdmin = true;
+    let filteredContributions = [];
+    
+    // Options for construction materials
+    const options = {
+        iron: ['8ሚሜ', '10ሚሜ', '12ሚሜ', '14ሚሜ', '16ሚሜ', '20ሚሜ', '24ሚሜ'],
+        nail: ['ቁጥር 5', 'ቁጥር 6', 'ቁጥር 7', 'ቁጥር 8', 'ቁጥር 9', 'ቁጥር 10', 'ቁጥር 12'],
+        cement: ['ከፍተኛ ጥራት', 'ፖርትላንድ', 'ፈጣን ደረቅ', 'ከባድ ሸክም', 'ውሃ መከላከያ'],
+        gravel: ['ቀይ ስኖ', 'ጥቁር ስኖ', 'ደረቅ ስኖ', 'የወንዝ ስኖ', 'የተፈጨ ስኖ'],
+        ash: ['የእንጨት ስኖ', 'የድንጋይ ስኖ', 'የከሰል ስኖ', 'ቀላል ስኖ', 'ከባድ ስኖ'],
+        others: ['ቀለም', 'ፕላስተር', 'ጡብ', 'ቧንቧ', 'ሽቦ', 'መብራት', 'መስታወት', 'ሌላ']
+    };
+    
+    // Sample Data
+    const sampleConstruction = {
+        iron: [{ date: "2024-03-15", type: "8ሚሜ", quantity: "500", pricePerKg: "95", total: "47500", supplier: "ብረት ኢትዮጵያ" }],
+        nail: [{ date: "2024-03-15", type: "ቁጥር 5", quantity: "200", pricePerKg: "125", total: "25000", supplier: "ሃርድዌር" }],
+        cement: [{ date: "2024-03-15", type: "ከፍተኛ ጥራት", quantity: "2000", pricePerKg: "12", total: "24000", supplier: "ደረጃ ሲሚንቶ" }],
+        gravel: [{ date: "2024-03-15", type: "ቀይ ስኖ", quantity: "30", pricePerKg: "250", total: "7500", supplier: "ቆራሬ" }],
+        ash: [{ date: "2024-03-16", type: "የእንጨት ስኖ", quantity: "20", pricePerKg: "320", total: "6400", supplier: "አሽዋ ኢንዱስትሪ" }],
+        others: [{ date: "2024-03-15", type: "ቀለም", quantity: "100", pricePerKg: "150", total: "15000", supplier: "ቀለም ፋብሪካ" }]
+    };
+    
+    const sampleMembers = [
+        { id: "M1001", name: "አበበ በቀለ", phone: "0911xxxxxx", shares: 5 },
+        { id: "M1002", name: "አለማየሁ ተስፋዬ", phone: "0922xxxxxx", shares: 3 },
+        { id: "M1003", name: "ብርሃን መለሰ", phone: "0933xxxxxx", shares: 2 }
+    ];
+    
+    const sampleContributions = {
+        "M1001": [{ receiptNo: "REC-001", date: "2024-03-15", amount: 2000, month: "2024-03", bankCode: "BANK001", note: "" }],
+        "M1002": [{ receiptNo: "REC-002", date: "2024-03-15", amount: 1500, month: "2024-03", bankCode: "BANK002", note: "" }],
+        "M1003": [{ receiptNo: "REC-003", date: "2024-03-15", amount: 2000, month: "2024-03", bankCode: "BANK003", note: "" }]
+    };
+    
+    // ==================== FIREBASE FUNCTIONS ====================
+    function showSyncStatus(syncing) {
+        const statusEl = document.getElementById('syncStatus');
+        if (syncing) {
+            statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> በመመሳሰል ላይ...';
+            statusEl.className = 'sync-status syncing';
+        } else {
+            statusEl.innerHTML = '<i class="fas fa-cloud"></i> ተመሳስሏል';
+            statusEl.className = 'sync-status';
+        }
+    }
+    
+    function loadFromFirebase() {
+        showSyncStatus(true);
+        
+        // Load Construction Data
+        database.ref('/construction').once('value').then(snapshot => {
+            if (snapshot.val()) {
+                for (let key in constructionData) {
+                    if (snapshot.val()[key]) {
+                        constructionData[key] = snapshot.val()[key];
+                    }
+                }
+            } else {
+                constructionData = JSON.parse(JSON.stringify(sampleConstruction));
+                saveConstructionToFirebase();
+            }
+            renderConstructionDisplay();
+            renderMaterialSection('iron');
+        }).catch(error => {
+            console.error("Error loading construction:", error);
+            constructionData = JSON.parse(JSON.stringify(sampleConstruction));
+            renderConstructionDisplay();
+            renderMaterialSection('iron');
+        });
+        
+        // Load Members
+        database.ref('/members').once('value').then(snapshot => {
+            if (snapshot.val() && snapshot.val().list) {
+                members = snapshot.val().list;
+            } else {
+                members = JSON.parse(JSON.stringify(sampleMembers));
+                saveMembersToFirebase();
+            }
+            renderMembersList();
+            updateMemberSelects();
+            if (isAdmin) {
+                updateAdminDashboard();
+                updateMonthlyReport();
+            } else {
+                renderMemberContributions();
+            }
+        }).catch(error => {
+            console.error("Error loading members:", error);
+            members = JSON.parse(JSON.stringify(sampleMembers));
+            renderMembersList();
+            updateMemberSelects();
+        });
+        
+        // Load Contributions
+        database.ref('/contributions').once('value').then(snapshot => {
+            if (snapshot.val()) {
+                contributions = snapshot.val();
+            } else {
+                contributions = JSON.parse(JSON.stringify(sampleContributions));
+                saveContributionsToFirebase();
+            }
+            if (!isAdmin && currentUser.memberId) {
+                renderMemberContributions();
+            }
+            if (isAdmin) {
+                updateAdminDashboard();
+                updateMonthlyReport();
+            }
+            showSyncStatus(false);
+        }).catch(error => {
+            console.error("Error loading contributions:", error);
+            contributions = JSON.parse(JSON.stringify(sampleContributions));
+            showSyncStatus(false);
+        });
+    }
+    
+    function saveConstructionToFirebase() {
+        database.ref('/construction').set(constructionData).catch(error => {
+            console.error("Error saving construction:", error);
+        });
+    }
+    
+    function saveMembersToFirebase() {
+        database.ref('/members').set({ list: members }).catch(error => {
+            console.error("Error saving members:", error);
+        });
+    }
+    
+    function saveContributionsToFirebase() {
+        database.ref('/contributions').set(contributions).catch(error => {
+            console.error("Error saving contributions:", error);
+        });
+    }
+    
+    // ==================== UI FUNCTIONS ====================
+    function generateMemberId() {
+        let newId = "M" + (Math.floor(Math.random() * 9000) + 1000).toString();
+        while(members.some(m => m.id === newId)) {
+            newId = "M" + (Math.floor(Math.random() * 9000) + 1000).toString();
+        }
+        return newId;
+    }
+    
+    function renderConstructionDisplay() {
+        let grandTotal = 0;
+        Object.keys(constructionData).forEach(k => {
+            grandTotal += constructionData[k].reduce((s, r) => s + (parseFloat(r.total) || 0), 0);
+        });
+        document.getElementById('grandTotalAmount').innerHTML = grandTotal.toLocaleString();
+        
+        let names = { iron: 'ብረት', nail: 'ሚስማር', cement: 'ሲሚንቶ', gravel: 'ጠጠር', ash: 'አሽዋ', others: 'ሌሎች' };
+        let summaryHtml = '';
+        Object.keys(constructionData).forEach(k => {
+            let total = constructionData[k].reduce((s, r) => s + (parseFloat(r.total) || 0), 0);
+            summaryHtml += `<div style="background:rgba(255,255,255,0.2); padding:0.3rem 0.6rem; border-radius:12px;">
+                <div>${names[k]}</div>
+                <div>${total.toLocaleString()} ብር</div>
+            </div>`;
+        });
+        document.getElementById('materialSummaryGrid').innerHTML = summaryHtml;
+    }
+    
+    function renderMaterialSection(key) {
+        let data = constructionData[key] || [];
+        let opts = options[key];
+        let unit = (key === 'gravel' || key === 'ash') ? 'ሜ³' : 'ኪግ';
+        let names = { iron: 'ብረት', nail: 'ሚስማር', cement: 'ሲሚንቶ', gravel: 'ጠጠር', ash: 'አሽዋ', others: 'ሌሎች' };
+        
+        let html = `<div class="card">
+            <div style="background:#2c3e50; color:white; padding:0.8rem; border-radius:12px; margin-bottom:1rem;">
+                <h2>${names[key]}</h2>
+            </div>
+            <div class="excel-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>ቀን</th><th>ዓይነት</th><th>ብዛት(${unit})</th><th>ዋጋ/${unit}</th><th>አጠቃላይ</th><th>አቅራቢ</th><th>ድርጊት</th></tr>
+                    </thead>
+                    <tbody>`;
+        
+        data.forEach((r, idx) => {
+            html += `<tr>
+                <td><input type="date" value="${r.date}" onchange="updateConstruction('${key}',${idx},'date',this.value)" ${isAdmin ? '' : 'disabled'}></td>
+                <td><select onchange="updateConstruction('${key}',${idx},'type',this.value)" ${isAdmin ? '' : 'disabled'}>${opts.map(o => `<option ${r.type === o ? 'selected' : ''}>${o}</option>`).join('')}</select></td>
+                <td><input type="number" value="${r.quantity}" onchange="updateConstruction('${key}',${idx},'quantity',this.value)" style="width:70px" ${isAdmin ? '' : 'disabled'}></td>
+                <td><input type="number" value="${r.pricePerKg}" onchange="updateConstruction('${key}',${idx},'pricePerKg',this.value)" style="width:80px" ${isAdmin ? '' : 'disabled'}></td>
+                <td><strong>${(parseFloat(r.total) || 0).toLocaleString()}</strong> ብር</td>
+                <td><input type="text" value="${r.supplier}" onchange="updateConstruction('${key}',${idx},'supplier',this.value)" ${isAdmin ? '' : 'disabled'}></td>
+                <td>${isAdmin ? `<button class="btn-danger" onclick="deleteConstruction('${key}',${idx})" style="padding:4px 8px;">ሰርዝ</button>` : '-'}</td>
+            </tr>`;
+        });
+        
+        html += `</tbody>
+                 </table>
+            </div>
+            <div id="actions-${key}" style="margin-top:1rem;">
+                ${isAdmin ? `<button class="btn btn-success" onclick="addConstruction('${key}')"><i class="fas fa-plus"></i> አዲስ</button>` : '<i class="fas fa-lock"></i> ለማስተካከል አድሚን ይግቡ'}
+            </div>
+        </div>`;
+        
+        document.getElementById('materialSections').innerHTML = html;
+        
+        // Construction Report Section
+        let reportHtml = `<div class="card">
+            <h3>የግንባታ ሪፖርት</h3>
+            <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center;">
+                <input type="date" id="reportDate" value="${new Date().toISOString().slice(0,10)}">
+                <button class="btn btn-warning" onclick="showConstructionReport()">ሪፖርት አሳይ</button>
+                <button class="btn btn-success" onclick="exportConstructionReport()">ኤክሴል ውረድ</button>
+            </div>
+            <div id="constructionReportContent" style="margin-top:1rem;"></div>
+        </div>`;
+        document.getElementById('constructionReport').innerHTML = reportHtml;
+    }
+    
+    function updateConstruction(key, idx, field, val) {
+        if (!isAdmin) return;
+        constructionData[key][idx][field] = val;
+        if (field === 'quantity' || field === 'pricePerKg') {
+            let q = parseFloat(constructionData[key][idx].quantity) || 0;
+            let p = parseFloat(constructionData[key][idx].pricePerKg) || 0;
+            constructionData[key][idx].total = (q * p).toFixed(2);
+        }
+        saveConstructionToFirebase();
+        renderMaterialSection(key);
+        renderConstructionDisplay();
+    }
+    
+    function deleteConstruction(key, idx) {
+        if (isAdmin) {
+            constructionData[key].splice(idx, 1);
+            saveConstructionToFirebase();
+            renderMaterialSection(key);
+            renderConstructionDisplay();
+        }
+    }
+    
+    function addConstruction(key) {
+        if (isAdmin) {
+            constructionData[key].push({
+                date: new Date().toISOString().slice(0, 10),
+                type: options[key][0],
+                quantity: "0",
+                pricePerKg: "0",
+                total: "0",
+                supplier: "አቅራቢ"
+            });
+            saveConstructionToFirebase();
+            renderMaterialSection(key);
+            renderConstructionDisplay();
+        }
+    }
+    
+    function showConstructionReport() {
+        let date = document.getElementById('reportDate').value;
+        let purchases = [];
+        let names = { iron: 'ብረት', nail: 'ሚስማር', cement: 'ሲሚንቶ', gravel: 'ጠጠር', ash: 'አሽዋ', others: 'ሌሎች' };
+        
+        Object.keys(constructionData).forEach(key => {
+            constructionData[key].forEach(r => {
+                if (r.date === date) {
+                    purchases.push({
+                        cat: names[key],
+                        type: r.type,
+                        qty: r.quantity,
+                        price: r.pricePerKg,
+                        total: r.total,
+                        sup: r.supplier
+                    });
+                }
+            });
+        });
+        
+        let html = purchases.length ? `<div style="background:#ff9800; padding:10px; border-radius:8px; margin-bottom:10px;"><strong>${date} ቀን ግዢዎች</strong></div>` : '<p>ምንም ግዢ የለም</p>';
+        purchases.forEach(p => {
+            html += `<div style="background:#f8fafc; padding:10px; margin:8px 0; border-left:4px solid #ff9800; border-radius:8px;">
+                <strong>${p.cat}</strong> - ${p.type}<br>
+                ${parseFloat(p.qty).toLocaleString()} × ${parseFloat(p.price).toLocaleString()} = <strong>${parseFloat(p.total).toLocaleString()} ብር</strong><br>
+                አቅራቢ: ${p.sup}
+            </div>`;
+        });
+        document.getElementById('constructionReportContent').innerHTML = html;
+    }
+    
+    function exportConstructionReport() {
+        let date = document.getElementById('reportDate').value;
+        let data = [["ቀን", "ምድብ", "ዓይነት", "ብዛት", "ዋጋ", "አጠቃላይ", "አቅራቢ"]];
+        let names = { iron: 'ብረት', nail: 'ሚስማር', cement: 'ሲሚንቶ', gravel: 'ጠጠር', ash: 'አሽዋ', others: 'ሌሎች' };
+        
+        Object.keys(constructionData).forEach(key => {
+            constructionData[key].forEach(r => {
+                if (r.date === date) {
+                    data.push([r.date, names[key], r.type, r.quantity, r.pricePerKg, r.total, r.supplier]);
+                }
+            });
+        });
+        
+        let ws = XLSX.utils.aoa_to_sheet(data);
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "ግዢ");
+        XLSX.writeFile(wb, `የ${date}_ግዢ.xlsx`);
+        alert("የግንባታ ሪፖርት ተቀምጧል!");
+    }
+    
+    function renderMembersList() {
+        let html = '';
+        members.forEach(m => {
+            let total = (contributions[m.id] || []).reduce((s, c) => s + c.amount, 0);
+            html += `<tr>
+                <td>${m.id}</td>
+                <td>${m.name}</td>
+                <td>${m.phone || '-'}</td>
+                <td>${m.shares || 1}</td>
+                <td>${total.toLocaleString()} ብር</td>
+                <td>${isAdmin ? `<button class="btn-danger" onclick="deleteMember('${m.id}')" style="padding:4px 8px;">ሰርዝ</button>` : '-'}</td>
+            </tr>`;
+        });
+        document.getElementById('membersTable').innerHTML = html;
+    }
+    
+    function updateMemberSelects() {
+        let opts = '<option value="">አባል ምረጥ</option>';
+        members.forEach(m => {
+            opts += `<option value="${m.id}" data-shares="${m.shares}">${m.id} - ${m.name} (${m.phone || '-'})</option>`;
+        });
+        document.getElementById('contributionMemberSelect').innerHTML = opts;
+        
+        document.getElementById('contributionMemberSelect').onchange = function() {
+            let shares = this.options[this.selectedIndex].getAttribute('data-shares') || 1;
+            document.getElementById('memberShares').value = shares;
+        };
+    }
+    
+    function updateAdminDashboard() {
+        if (!isAdmin) return;
+        let total = 0, shares = 0;
+        Object.keys(contributions).forEach(mid => {
+            contributions[mid].forEach(c => total += c.amount);
+        });
+        members.forEach(m => shares += m.shares);
+        document.getElementById('totalAllTimeContribution').innerText = total.toLocaleString();
+        document.getElementById('totalAllSharesPaid').innerText = shares;
+        document.getElementById('totalMembersCount').innerText = members.length;
+    }
+    
+    function updateMonthlyReport() {
+        if (!isAdmin) return;
+        let month = document.getElementById('monthlyReportMonth').value || new Date().toISOString().slice(0, 7);
+        document.getElementById('monthlyReportMonth').value = month;
+        let total = 0, shares = 0, payers = new Set();
+        
+        Object.keys(contributions).forEach(mid => {
+            contributions[mid].forEach(c => {
+                if (c.month === month) {
+                    total += c.amount;
+                    payers.add(mid);
+                    let m = members.find(m => m.id === mid);
+                    if (m) shares += m.shares;
+                }
+            });
+        });
+        
+        document.getElementById('monthlyTotalAmount').innerText = total.toLocaleString();
+        document.getElementById('monthlyTotalShares').innerText = shares;
+        document.getElementById('monthlyPayingMembers').innerText = payers.size;
+    }
+    
+    function searchMembers() {
+        let term = document.getElementById('memberSearchInput').value.toLowerCase();
+        let filtered = members.filter(m => m.name.toLowerCase().includes(term) || m.id.toLowerCase().includes(term));
+        let resultsDiv = document.getElementById('memberSearchResults');
+        if (term && filtered.length) {
+            let html = '<div style="background:white; border:1px solid #ddd; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">';
+            filtered.forEach(m => {
+                html += `<div style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;" onclick="selectMember('${m.id}')">${m.id} - ${m.name} (${m.shares} አክሲዮን)</div>`;
+            });
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        } else {
+            resultsDiv.innerHTML = '';
+        }
+    }
+    
+    function selectMember(id) {
+        document.getElementById('contributionMemberSelect').value = id;
+        let shares = document.getElementById('contributionMemberSelect').options[document.getElementById('contributionMemberSelect').selectedIndex].getAttribute('data-shares') || 1;
+        document.getElementById('memberShares').value = shares;
+        document.getElementById('memberSearchInput').value = '';
+        document.getElementById('memberSearchResults').innerHTML = '';
+    }
+    
+    function addNewMember() {
+        if (!isAdmin) return;
+        let name = document.getElementById('newMemberName').value.trim();
+        let phone = document.getElementById('newMemberPhone').value.trim();
+        let shares = parseInt(document.getElementById('newMemberShares').value) || 1;
+        if (!name) {
+            alert("ስም ያስገቡ");
+            return;
+        }
+        let newId = generateMemberId();
+        members.push({ id: newId, name, phone: phone || '-', shares });
+        saveMembersToFirebase();
+        renderMembersList();
+        updateMemberSelects();
+        
+        let resultDiv = document.getElementById('newMemberResult');
+        resultDiv.innerHTML = `<div style="background:#27ae60; color:white; padding:12px; border-radius:12px; margin-top:10px;">
+            አዲስ አባል ተመዝግቧል!<br>
+            <strong>አይዲ: ${newId}</strong><br>
+            ይህን አይዲ ለመግቢያ ይጠቀሙ
+        </div>`;
+        setTimeout(() => resultDiv.innerHTML = '', 4000);
+        
+        document.getElementById('newMemberName').value = '';
+        document.getElementById('newMemberPhone').value = '';
+        document.getElementById('newMemberShares').value = '1';
+        if (isAdmin) {
+            updateAdminDashboard();
+            updateMonthlyReport();
+        }
+    }
+    
+    function deleteMember(id) {
+        if (isAdmin && confirm("እርግጠኛ ነዎት? ይህን አባል ለማስወገድ ይፈልጋሉ?")) {
+            members = members.filter(m => m.id !== id);
+            delete contributions[id];
+            saveMembersToFirebase();
+            saveContributionsToFirebase();
+            renderMembersList();
+            updateMemberSelects();
+            if (isAdmin) {
+                updateAdminDashboard();
+                updateMonthlyReport();
+            }
+        }
+    }
+    
+    function addMonthlyContribution() {
+        if (!isAdmin) return;
+        let id = document.getElementById('contributionMemberSelect').value;
+        let amount = parseFloat(document.getElementById('monthlyAmount').value);
+        let month = document.getElementById('monthSelect').value;
+        let bank = document.getElementById('bankCode').value.trim();
+        let shares = parseInt(document.getElementById('memberShares').value) || 1;
+        
+        if (!id || !amount || !month) {
+            alert("ሁሉም መረጃዎች ይሙሉ!");
+            return;
+        }
+        
+        if (!contributions[id]) contributions[id] = [];
+        if (contributions[id].some(c => c.month === month)) {
+            alert("ለዚህ ወር አስቀድሞ ተመዝግቧል!");
+            return;
+        }
+        
+        let receipt = `${month.replace('-', '')}-${id.slice(-4)}`;
+        contributions[id].push({
+            receiptNo: receipt,
+            date: month + '-01',
+            amount: amount,
+            month: month,
+            bankCode: bank || '-',
+            note: ""
+        });
+        
+        saveContributionsToFirebase();
+        
+        // Update member shares if changed
+        let member = members.find(m => m.id === id);
+        if (member && member.shares !== shares) {
+            member.shares = shares;
+            saveMembersToFirebase();
+            renderMembersList();
+            updateMemberSelects();
+        }
+        
+        document.getElementById('monthlyAmount').value = '';
+        document.getElementById('bankCode').value = '';
+        renderMembersList();
+        if (isAdmin) {
+            updateAdminDashboard();
+            updateMonthlyReport();
+        }
+        alert("መዋጮ ተመዝግቧል!");
+    }
+    
+    function renderMemberContributions() {
+        let user = contributions[currentUser.memberId] || [];
+        filteredContributions = [...user];
+        displayContributions(filteredContributions);
+        let total = user.reduce((s, c) => s + c.amount, 0);
+        document.getElementById('memberTotalContribution').innerText = total.toLocaleString();
+        document.getElementById('memberContributionCount').innerText = user.length;
+        let member = members.find(m => m.id === currentUser.memberId);
+        document.getElementById('currentMemberName').innerText = member?.name || '-';
+        document.getElementById('currentMemberShares').innerText = member?.shares || 0;
+        document.getElementById('currentMemberPhone').innerText = member?.phone || '-';
+    }
+    
+    function displayContributions(list) {
+        let html = `<table class="data-table">
+            <thead>
+                <tr><th>ተከታታይ ቁጥር</th><th>ወር</th><th>መጠን</th><th>ባንክ ኮድ</th><th>ማስታወሻ</th><th>ድርጊት</th> </tr>
+            </thead>
+            <tbody>`;
+        list.forEach((c, idx) => {
+            html += `<tr>
+                <td>${c.receiptNo}</td>
+                <td>${c.month}</td>
+                <td>${c.amount.toLocaleString()} ብር</td>
+                <td>${c.bankCode || '-'}</td>
+                <td>${c.note || '-'}</td>
+                <td>${isAdmin ? `<button class="btn-danger" onclick="deleteContribution('${currentUser.memberId || document.getElementById('contributionMemberSelect')?.value}', ${idx})" style="padding:4px 8px;">ሰርዝ</button>` : '<i class="fas fa-lock"></i>'}</td>
+            </tr>`;
+        });
+        html += `</tbody>
+        </table>`;
+        document.getElementById('filteredResult').innerHTML = html;
+    }
+    
+    function filterContributionsByDate() {
+        let start = document.getElementById('filterStartDate').value;
+        let end = document.getElementById('filterEndDate').value;
+        let source;
+        
+        if (isAdmin && document.getElementById('contributionMemberSelect').value) {
+            source = contributions[document.getElementById('contributionMemberSelect').value] || [];
+        } else {
+            source = contributions[currentUser.memberId] || [];
+        }
+        
+        filteredContributions = source.filter(c => c.date >= start && c.date <= end);
+        displayContributions(filteredContributions);
+        let total = filteredContributions.reduce((s, c) => s + c.amount, 0);
+        if (!isAdmin) {
+            document.getElementById('memberTotalContribution').innerText = total.toLocaleString();
+            document.getElementById('memberContributionCount').innerText = filteredContributions.length;
+        }
+    }
+    
+    function deleteContribution(mid, idx) {
+        if (isAdmin && contributions[mid]) {
+            contributions[mid].splice(idx, 1);
+            if (!contributions[mid].length) delete contributions[mid];
+            saveContributionsToFirebase();
+            filterContributionsByDate();
+            renderMembersList();
+            if (isAdmin) {
+                updateAdminDashboard();
+                updateMonthlyReport();
+            }
+        }
+    }
+    
+    async function exportToPDF() {
+        if (filteredContributions.length === 0) {
+            alert("ምንም ውሂብ የለም");
+            return;
+        }
+        
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        let y = 20;
+        
+        pdf.setFontSize(14);
+        pdf.setTextColor(0, 100, 0);
+        pdf.text("TOWN1 | PLANET APARTMENTS", 105, y, { align: 'center' });
+        y += 7;
+        
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text("Invest your déjeuner to build imagination apartments", 105, y, { align: 'center' });
+        y += 12;
+        
+        pdf.setFontSize(11);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text("የወርሃዊ መዋጮ ሪፖርት", 105, y, { align: 'center' });
+        y += 7;
+        pdf.text(`ከ${document.getElementById('filterStartDate').value} እስከ ${document.getElementById('filterEndDate').value}`, 105, y, { align: 'center' });
+        y += 12;
+        
+        // Table Header
+        pdf.setFillColor(52, 73, 94);
+        pdf.setTextColor(255, 255, 255);
+        pdf.rect(20, y, 170, 8, 'F');
+        pdf.setFontSize(7);
+        pdf.text("ተከታታይ ቁጥር", 22, y + 5);
+        pdf.text("ወር", 62, y + 5);
+        pdf.text("መጠን", 92, y + 5);
+        pdf.text("ባንክ ኮድ", 122, y + 5);
+        pdf.text("ማስታወሻ", 152, y + 5);
+        y += 10;
+        pdf.setTextColor(0, 0, 0);
+        
+        let total = 0;
+        filteredContributions.forEach(c => {
+            if (y > 270) {
+                pdf.addPage();
+                y = 20;
+                pdf.setFontSize(10);
+                pdf.setTextColor(0, 100, 0);
+                pdf.text("TOWN1 | PLANET APARTMENTS", 105, y, { align: 'center' });
+                y += 10;
+                pdf.setFillColor(52, 73, 94);
+                pdf.setTextColor(255, 255, 255);
+                pdf.rect(20, y, 170, 8, 'F');
+                pdf.text("ተከታታይ ቁጥር", 22, y + 5);
+                pdf.text("ወር", 62, y + 5);
+                pdf.text("መጠን", 92, y + 5);
+                pdf.text("ባንክ ኮድ", 122, y + 5);
+                pdf.text("ማስታወሻ", 152, y + 5);
+                y += 10;
+                pdf.setTextColor(0, 0, 0);
+            }
+            pdf.text(c.receiptNo, 22, y + 3);
+            pdf.text(c.month, 62, y + 3);
+            pdf.text(c.amount.toLocaleString(), 92, y + 3);
+            pdf.text(c.bankCode || '-', 122, y + 3);
+            pdf.text(c.note || '-', 152, y + 3);
+            total += c.amount;
+            y += 6;
+        });
+        
+        y += 8;
+        pdf.setFontSize(10);
+        pdf.text(`አጠቃላይ: ${total.toLocaleString()} ብር`, 105, y, { align: 'center' });
+        y += 12;
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text("✧ TOWN1 | PLANET APARTMENTS ✧", 105, y, { align: 'center' });
+        
+        pdf.save(`Town1_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+        alert("PDF ተዘጋጅቷል!");
+    }
+    
+    // ==================== AUTHENTICATION ====================
+    let selectedType = 'admin';
+    
+    function selectUserType(t) {
+        selectedType = t;
+        document.getElementById('adminTypeBtn').classList.toggle('active', t === 'admin');
+        document.getElementById('memberTypeBtn').classList.toggle('active', t === 'member');
+    }
+    
+    function togglePasswordVisibility() {
+        let pwdInput = document.getElementById('loginPassword');
+        let icon = document.querySelector('.toggle-password');
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            pwdInput.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+    
+    function showTempMessage(msg) {
+        let infoDiv = document.getElementById('loginInfo');
+        infoDiv.innerHTML = msg;
+        infoDiv.style.display = 'block';
+        setTimeout(() => {
+            infoDiv.style.display = 'none';
+        }, 3000);
+    }
+    
+    function login() {
+        let pwd = document.getElementById('loginPassword').value;
+        
+        if (selectedType === 'admin') {
+            if (pwd === 'admin123') {
+                isAdmin = true;
+                currentUser = { type: 'admin', memberId: null };
+                startApp();
+                showTempMessage("እንኳን ደህና መጡ አድሚን!");
+            } else {
+                document.getElementById('loginError').innerHTML = 'የአድሚን ፓስዎርድ ተሳስቷል!';
+            }
+        } else {
+            let member = members.find(m => m.id === pwd);
+            if (member) {
+                isAdmin = false;
+                currentUser = { type: 'member', memberId: member.id };
+                startApp();
+                showTempMessage(`እንኳን ደህና መጡ ${member.name}!`);
+            } else {
+                document.getElementById('loginError').innerHTML = 'የአባል አይዲ ተሳስቷል!';
+            }
+        }
+    }
+    
+    function startApp() {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        
+        // Set default dates
+        let today = new Date();
+        let startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        document.getElementById('filterStartDate').value = startDate.toISOString().slice(0, 10);
+        document.getElementById('filterEndDate').value = today.toISOString().slice(0, 10);
+        document.getElementById('monthSelect').value = today.toISOString().slice(0, 7);
+        document.getElementById('monthlyReportMonth').value = today.toISOString().slice(0, 7);
+        
+        if (isAdmin) {
+            document.getElementById('userRoleBadge').innerHTML = '<i class="fas fa-user-shield"></i> አድሚን';
+            document.getElementById('userRoleBadge').className = 'admin-badge';
+            document.getElementById('monthlyReportSection').style.display = 'block';
+            document.getElementById('adminDashboard').style.display = 'block';
+            document.getElementById('adminMonthlyEntry').style.display = 'block';
+            document.getElementById('adminMemberManagement').style.display = 'block';
+            document.getElementById('memberViewWarning').style.display = 'none';
+            document.getElementById('memberNameDisplay').style.display = 'none';
+        } else {
+            document.getElementById('userRoleBadge').innerHTML = '<i class="fas fa-user"></i> አባል';
+            document.getElementById('userRoleBadge').className = 'member-badge';
+            document.getElementById('monthlyReportSection').style.display = 'none';
+            document.getElementById('adminDashboard').style.display = 'none';
+            document.getElementById('adminMonthlyEntry').style.display = 'none';
+            document.getElementById('adminMemberManagement').style.display = 'none';
+            document.getElementById('memberViewWarning').style.display = 'block';
+            document.getElementById('memberNameDisplay').style.display = 'inline-block';
+            let member = members.find(m => m.id === currentUser.memberId);
+            document.getElementById('memberNameDisplay').innerHTML = `<i class="fas fa-user"></i> ${member?.name} (${member?.id})`;
+        }
+        
+        loadFromFirebase();
+    }
+    
+    function logout() {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('mainContent').style.display = 'none';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginError').innerHTML = '';
+        
+        let icon = document.querySelector('.toggle-password');
+        if (icon && icon.classList.contains('fa-eye-slash')) {
+            document.getElementById('loginPassword').type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+    
+    // ==================== TAB SWITCHING ====================
+    function switchMainTab(tab) {
+        document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+        document.getElementById('constructionTab').classList.toggle('active', tab === 'construction');
+        document.getElementById('membersTab').classList.toggle('active', tab === 'members');
+        
+        if (tab === 'members' && !isAdmin && currentUser.memberId) {
+            renderMemberContributions();
+        }
+        if (tab === 'members' && isAdmin) {
+            updateAdminDashboard();
+            updateMonthlyReport();
+        }
+    }
+    
+    function switchMaterial(material) {
+        renderMaterialSection(material);
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`[data-material="${material}"]`).classList.add('active');
+    }
+    
+    // Event Listeners
+    document.getElementById('contributionMemberSelect')?.addEventListener('change', () => filterContributionsByDate());
+    document.querySelectorAll('.main-tab-btn').forEach(b => {
+        b.addEventListener('click', () => switchMainTab(b.getAttribute('data-tab')));
+    });
+    document.querySelectorAll('.nav-btn').forEach(b => {
+        b.addEventListener('click', () => switchMaterial(b.getAttribute('data-material')));
+    });
+    
+    // Make functions global for HTML onclick
+    window.togglePasswordVisibility = togglePasswordVisibility;
+    window.selectUserType = selectUserType;
+    window.login = login;
+    window.logout = logout;
+    window.updateConstruction = updateConstruction;
+    window.deleteConstruction = deleteConstruction;
+    window.addConstruction = addConstruction;
+    window.showConstructionReport = showConstructionReport;
+    window.exportConstructionReport = exportConstructionReport;
+    window.addNewMember = addNewMember;
+    window.deleteMember = deleteMember;
+    window.addMonthlyContribution = addMonthlyContribution;
+    window.filterContributionsByDate = filterContributionsByDate;
+    window.exportToPDF = exportToPDF;
+    window.deleteContribution = deleteContribution;
+    window.searchMembers = searchMembers;
+    window.selectMember = selectMember;
+</script>
+</body>
+</html>
